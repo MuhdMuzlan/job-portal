@@ -1,0 +1,186 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  user
+  company
+  admin
+}
+
+enum JobType {
+  full_time
+  part_time
+  contract
+  remote
+  hybrid
+}
+
+enum ExperienceLevel {
+  entry
+  mid
+  senior
+  lead
+  executive
+}
+
+enum JobStatus {
+  draft
+  active
+  closed
+}
+
+enum ApplicationStatus {
+  pending
+  reviewing
+  interview
+  offered
+  rejected
+}
+
+model User {
+  id              String         @id @default(uuid())
+  email           String         @unique
+  password        String
+  role            Role           @default(user)
+  firstName       String?
+  lastName        String?
+  phone           String?
+  location        String?
+  headline        String?
+  summary         String?
+  skills          String[]
+  experienceYears Int?
+  avatarUrl       String?
+  isVerified      Boolean        @default(false)
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  company         Company?
+  resumes         Resume[]
+  applications    Application[]
+  jobMatches      JobMatch[]
+
+  @@map("users")
+}
+
+model Company {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name         String
+  logoUrl      String?
+  description  String?
+  industry     String?
+  companySize  String?
+  website      String?
+  location     String?
+  isVerified   Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  jobs         Job[]
+
+  @@map("companies")
+}
+
+model Job {
+  id               String           @id @default(uuid())
+  companyId        String
+  company          Company          @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  title            String
+  description      String
+  requirements     String?
+  responsibilities String?
+  location         String
+  jobType          JobType
+  salaryMin        Int?
+  salaryMax        Int?
+  currency         String           @default("USD")
+  skillsRequired   String[]
+  experienceLevel  ExperienceLevel
+  status           JobStatus        @default(active)
+  embedding        Float[]          // Vector embedding for similarity search
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  expiresAt        DateTime?
+
+  applications     Application[]
+  jobMatches       JobMatch[]
+
+  @@index([status])
+  @@index([location])
+  @@index([jobType])
+  @@index([experienceLevel])
+  @@map("jobs")
+}
+
+model Resume {
+  id                  String             @id @default(uuid())
+  userId              String
+  user                User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fileUrl             String
+  fileName            String
+  parsedText          String?
+  parsedSkills        String[]
+  parsedExperience    Json?
+  parsedEducation     Json?
+  embedding           Float[]            // Vector embedding for similarity search
+  isPrimary           Boolean            @default(false)
+  uploadedAt          DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+
+  applications        Application[]
+  jobMatches          JobMatch[]
+
+  @@index([userId])
+  @@map("resumes")
+}
+
+model Application {
+  id            String            @id @default(uuid())
+  userId        String
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobId         String
+  job           Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  resumeId      String
+  resume        Resume            @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  coverLetter   String?
+  status        ApplicationStatus @default(pending)
+  matchScore    Float?
+  appliedAt     DateTime          @default(now())
+  updatedAt     DateTime          @updatedAt
+
+  @@unique([userId, jobId])
+  @@index([status])
+  @@map("applications")
+}
+
+model JobMatch {
+  id                    String   @id @default(uuid())
+  resumeId              String
+  resume                Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  jobId                 String
+  job                   Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  matchScore            Float
+  skillMatchScore       Float
+  experienceMatchScore  Float
+  semanticMatchScore    Float
+  matchReasons          String[]
+  calculatedAt          DateTime @default(now())
+  expiresAt             DateTime @default(dbgenerated("(DATE_ADD(now(), INTERVAL 1 day))"))
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([resumeId, jobId])
+  @@index([matchScore])
+  @@map("job_matches")
+}
