@@ -7,7 +7,7 @@ import { AppError } from '../middleware/error.middleware';
 const prisma = new PrismaClient();
 
 // ML Service client
-async function callMLService(endpoint: string, data: any) {
+async function callMLService(endpoint: string, data: any): Promise<any> {
   const response = await fetch(`${config.mlServiceUrl}${endpoint}`, {
     method: 'POST',
     headers: {
@@ -20,7 +20,7 @@ async function callMLService(endpoint: string, data: any) {
     throw new Error(`ML service error: ${response.statusText}`);
   }
 
-  return response.json();
+  return response.json() as Promise<any>;
 }
 
 export const matchingController = {

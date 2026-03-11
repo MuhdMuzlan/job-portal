@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import { config } from '../config';
 import { userService } from '../services/user.service';
 import { AppError } from '../middleware/error.middleware';
+import { AuthRequest } from '../middleware/auth.middleware';
 
 export const authController = {
   async register(req: Request, res: Response) {
@@ -33,7 +34,7 @@ export const authController = {
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         config.jwtSecret,
-        { expiresIn: config.jwtExpiresIn }
+        { expiresIn: config.jwtExpiresIn as any }
       );
 
       res.status(201).json({
@@ -78,7 +79,7 @@ export const authController = {
       const token = jwt.sign(
         { userId: user.id, email: user.email, role: user.role },
         config.jwtSecret,
-        { expiresIn: config.jwtExpiresIn }
+        { expiresIn: config.jwtExpiresIn as any }
       );
 
       res.json({
@@ -107,7 +108,7 @@ export const authController = {
     res.json({ success: true, message: 'Logged out successfully' });
   },
 
-  async getCurrentUser(req: Request, res: Response) {
+  async getCurrentUser(req: AuthRequest, res: Response) {
     try {
       const userId = req.user?.userId;
       if (!userId) {

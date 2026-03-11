@@ -144,10 +144,13 @@ export const jobsService = {
   },
 
   async update(id: string, data: Partial<CreateJobData>) {
+    const { companyId, jobType, experienceLevel, ...rest } = data;
     return prisma.job.update({
       where: { id },
       data: {
-        ...data,
+        ...rest,
+        ...(jobType && { jobType: jobType as any }),
+        ...(experienceLevel && { experienceLevel: experienceLevel as any }),
         updatedAt: new Date(),
       },
     });
