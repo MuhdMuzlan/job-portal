@@ -6,53 +6,55 @@ on:
 
 jobs:
   # ─── Deploy Frontend to Vercel ───────────────────────────────────────────────
-  # Vercel auto-deploys when it detects a push to main via its GitHub integration.
-  # This job just confirms the build succeeds before Vercel picks it up.
+  # Vercel auto-deploys via GitHub integration using vercel.json at repo root.
+  # This job validates the build before Vercel picks it up.
   deploy-frontend:
     name: Deploy Frontend (Vercel)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - name: Install dependencies
+      - name: Install root workspace dependencies
         run: npm ci
-      - name: Build
+      - name: Build shared types
+        run: npm run build --workspace=shared
+      - name: Build frontend
+        working-directory: frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
           NEXT_PUBLIC_ML_SERVICE_URL: ${{ secrets.NEXT_PUBLIC_ML_SERVICE_URL }}
-      # Vercel deploys automatically via GitHub integration — no extra step needed.
+      # Vercel deploys automatically via GitHub integration using vercel.json.
       # To use Vercel CLI instead, uncomment below and add VERCEL_TOKEN secret:
       # - name: Deploy to Vercel
       #   run: npx vercel --prod --token=${{ secrets.VERCEL_TOKEN }}
+      #   working-directory: frontend
 
   # ─── Deploy Backend to Railway ───────────────────────────────────────────────
-  # Railway auto-deploys when it detects a push to main via its GitHub integration.
+  # Railway auto-deploys via GitHub integration using backend/railway.toml.
   # This job validates the build before Railway picks it up.
   deploy-backend:
     name: Deploy Backend (Railway)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - name: Install dependencies
+      - name: Install root workspace dependencies
         run: npm ci
-      - name: Build
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
+      - name: Build backend
+        working-directory: backend
         run: npm run build
       # Railway deploys automatically via GitHub integration.
-      # To trigger Railway deploy manually via CLI, uncomment below:
+      # To trigger Railway deploy via CLI, uncomment below:
       # - name: Deploy to Railway
       #   run: npx @railway/cli up --service=backend
       #   env:
@@ -64,9 +66,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Railway deploys the ML service automatically from backend/ml directory.
-      # No build step needed — Railway runs pip install + uvicorn on its end.
       - name: Confirm ML service files exist
         run: |
           ls backend/ml/
           echo "ML service ready for Railway deployment"
+      # Railway deploys the ML service automatically from backend/ml directory
+      # using backend/ml/railway.toml and backend/ml/Dockerfile.

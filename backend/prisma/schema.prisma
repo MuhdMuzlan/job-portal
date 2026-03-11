@@ -176,7 +176,7 @@ model JobMatch {
   semanticMatchScore    Float
   matchReasons          String[]
   calculatedAt          DateTime @default(now())
-  expiresAt             DateTime @default(dbgenerated("(DATE_ADD(now(), INTERVAL 1 day))"))
+  expiresAt             DateTime @default(dbgenerated("(now() + interval '1 day')"))
   userId    String
   user      User     @relation(fields: [userId], references: [id])
 

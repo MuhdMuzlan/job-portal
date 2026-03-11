@@ -17,30 +17,34 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-      - run: npm ci --workspace=shared
-      - run: npm run build --workspace=shared
+      - name: Install root workspace dependencies
+        run: npm ci
+      - name: Build shared types
+        run: npm run build --workspace=shared
 
   # ─── Frontend ───────────────────────────────────────────────────────────────
   frontend:
     name: Frontend (Lint + Type Check + Build)
     runs-on: ubuntu-latest
     needs: shared
-    defaults:
-      run:
-        working-directory: frontend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - name: Install dependencies
+      - name: Install root workspace dependencies
         run: npm ci
+      - name: Build shared types first
+        run: npm run build --workspace=shared
       - name: Type check
+        working-directory: frontend
         run: npx tsc --noEmit
       - name: Lint
+        working-directory: frontend
         run: npm run lint
       - name: Build
+        working-directory: frontend
         run: npm run build
         env:
           NEXT_PUBLIC_API_URL: https://placeholder.railway.app
@@ -51,20 +55,24 @@ jobs:
     name: Backend (Type Check + Build)
     runs-on: ubuntu-latest
     needs: shared
-    defaults:
-      run:
-        working-directory: backend
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           cache: 'npm'
-      - name: Install dependencies
+      - name: Install root workspace dependencies
         run: npm ci
+      - name: Build shared types first
+        run: npm run build --workspace=shared
+      - name: Generate Prisma client
+        working-directory: backend
+        run: npx prisma generate
       - name: Type check
+        working-directory: backend
         run: npx tsc --noEmit
       - name: Build
+        working-directory: backend
         run: npm run build
 
   # ─── ML Service ─────────────────────────────────────────────────────────────
@@ -83,4 +91,4 @@ jobs:
       - name: Install core dependencies (no heavy ML libs for CI)
         run: pip install fastapi uvicorn pydantic
       - name: Syntax check
-        run: python -m py_compile main.py || echo "main.py not found, skipping"
+        run: python -m py_compile src/main.py || echo "main.py not found, skipping"
