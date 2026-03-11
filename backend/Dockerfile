@@ -5,7 +5,7 @@ WORKDIR /app
 
 # Copy package files and install dependencies
 COPY package*.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source and generate Prisma client
 COPY prisma ./prisma/
@@ -24,7 +24,7 @@ ENV NODE_ENV=production
 
 # Install only production deps
 COPY package*.json ./
-RUN npm ci --omit=dev
+RUN npm install --omit=dev
 
 # Copy Prisma files (schema + generated client + migrations)
 COPY --from=builder /app/prisma ./prisma/
